@@ -14,33 +14,32 @@ type DbHelperInitOptions struct {
 // It creates a 'master' session, given the mgo url/db and init options and then
 // uses its copies for db operations.
 type DbHelper struct {
-	dbName        string // used mongodb database name
 	masterSession *mgo.Session
 }
 
-func NewDbHelper(mgoUrl string, dbName string, opts *DbHelperInitOptions) (d *DbHelper, err error) {
+// Dial connects to the db using specified options and returns helper or error if dial fails.
+func Dial(dialInfo *mgo.DialInfo, opts *DbHelperInitOptions) (d *DbHelper, err error) {
 	d = new(DbHelper)
-	d.masterSession, err = mgo.Dial(mgoUrl)
+	d.masterSession, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot connect to mongo: '%s'", err)
 	}
 	d.masterSession.SetSafe(opts.Safe)
-	d.dbName = dbName
 	return d, nil
 }
 
-// c is a shortcut for getting a collection by name inside current database
-func (db *DbHelper) c(collectionName string) (*mgo.Collection, *mgo.Session) {
+// C is a shortcut for getting a collection+session (master session copy) by name inside current database
+func (db *DbHelper) C(collectionName string) (*mgo.Collection, *mgo.Session) {
 	session := db.masterSession.New()
-	return session.DB(db.dbName).C(collectionName), session
+	return session.DB("").C(collectionName), session
 }
 
-// s is a shortcut for creating a session for current database
-func (db *DbHelper) s() *mgo.Session {
+// S is a shortcut for creating a session for current database
+func (db *DbHelper) S() *mgo.Session {
 	return db.masterSession.New()
 }
 
-// cs is a shortcut for creating a collection using an existing session
-func (db *DbHelper) cs(collectionName string, session *mgo.Session) *mgo.Collection {
-	return session.DB(db.dbName).C(collectionName)
+// Cs is a shortcut for creating a collection using an existing session
+func (db *DbHelper) Cs(collectionName string, session *mgo.Session) *mgo.Collection {
+	return session.DB("").C(collectionName)
 }
